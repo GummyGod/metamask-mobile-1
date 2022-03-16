@@ -667,7 +667,7 @@ class SendFlow extends PureComponent {
 											{strings('transaction.confusable_title')}
 										</Text>
 										<Text style={[styles.confusableMsg, displayAsWarning && styles.black]}>
-											{strings('transaction.confusable_msg')} {explanations.join(', ')}
+											{strings('transaction.confusable_msg')} {explanations.join(', ')}.
 										</Text>
 									</View>
 								</View>
