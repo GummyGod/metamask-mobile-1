@@ -80,6 +80,7 @@ class AuthenticationService {
 		const { KeyringController }: any = Engine.context;
 		// Restore vault with empty password
 		await KeyringController.submitPassword('');
+		// await this._createWalletVaultAndKeychain('');
 		await SecureKeychain.resetGenericPassword();
 	};
 

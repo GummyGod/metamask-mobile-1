@@ -7,6 +7,8 @@ import AUTHENTICATION_TYPE from '../constants/userProperties';
 import * as Keychain from 'react-native-keychain';
 import Engine from './Engine';
 
+//const Aes = NativeModules.Aes;
+// const AesForked = NativeModules.AesForked;
 describe('AuthenticationService', () => {
 	const mockStore = configureMockStore();
 	const initialState = {
@@ -31,7 +33,6 @@ describe('AuthenticationService', () => {
 		},
 	};
 	const store = mockStore(initialState);
-
 	beforeEach(() => {
 		Engine.init(initialState.engine.backgroundState);
 		AuthenticationService.init(store);
@@ -39,6 +40,7 @@ describe('AuthenticationService', () => {
 
 	afterEach(() => {
 		AsyncStorage.clear();
+		jest.restoreAllMocks();
 	});
 
 	it('should return a type password', async () => {
@@ -122,16 +124,16 @@ describe('AuthenticationService', () => {
 	// 	expect(await AsyncStorage.getItem(PASSCODE_CHOICE)).toBeNull();
 	// });
 
-	// it('should successfully complete userEntryAuth', async () => {
-	// 	// //Create new wallet
-	// 	await AuthenticationService.newWalletAndKeyChain('test1234', {
-	// 		type: AUTHENTICATION_TYPE.PASSWORD,
-	// 		biometryType: undefined,
-	// 	});
-	// 	await AuthenticationService.userEntryAuth(
-	// 		'test',
-	// 		{ type: AUTHENTICATION_TYPE.PASSWORD, biometryType: undefined },
-	// 		'0x000'
-	// 	);
-	// });
+	it('should successfully complete userEntryAuth', async () => {
+		// //Create new wallet
+		await AuthenticationService.newWalletAndKeyChain('test1234', {
+			type: AUTHENTICATION_TYPE.PASSWORD,
+			biometryType: undefined,
+		});
+		await AuthenticationService.userEntryAuth(
+			'test',
+			{ type: AUTHENTICATION_TYPE.PASSWORD, biometryType: undefined },
+			'0x000'
+		);
+	});
 });

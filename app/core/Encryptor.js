@@ -1,6 +1,4 @@
 import { NativeModules } from 'react-native';
-const Aes = NativeModules.Aes;
-const AesForked = NativeModules.AesForked;
 
 /**
  * Class that exposes two public methods: Encrypt and Decrypt
@@ -19,19 +17,21 @@ export default class Encryptor {
 	}
 
 	_generateKey = (password, salt, lib) =>
-		lib === 'original' ? Aes.pbkdf2(password, salt, 5000, 256) : AesForked.pbkdf2(password, salt);
+		lib === 'original'
+			? NativeModules.Aes.pbkdf2(password, salt, 5000, 256)
+			: NativeModules.AesForked.pbkdf2(password, salt);
 
 	_keyFromPassword = (password, salt, lib) => this._generateKey(password, salt, lib);
 
 	_encryptWithKey = async (text, keyBase64) => {
-		const iv = await Aes.randomKey(16);
-		return Aes.encrypt(text, keyBase64, iv).then((cipher) => ({ cipher, iv }));
+		const iv = await NativeModules.Aes.randomKey(16);
+		return NativeModules.Aes.encrypt(text, keyBase64, iv).then((cipher) => ({ cipher, iv }));
 	};
 
 	_decryptWithKey = (encryptedData, key, lib) =>
 		lib === 'original'
-			? Aes.decrypt(encryptedData.cipher, key, encryptedData.iv)
-			: AesForked.decrypt(encryptedData.cipher, key, encryptedData.iv);
+			? NativeModules.Aes.decrypt(encryptedData.cipher, key, encryptedData.iv)
+			: NativeModules.AesForked.decrypt(encryptedData.cipher, key, encryptedData.iv);
 
 	/**
 	 * Encrypts a JS object using a password (and AES encryption with native libraries)
