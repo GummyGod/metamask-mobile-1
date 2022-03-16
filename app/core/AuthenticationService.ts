@@ -35,8 +35,11 @@ class AuthenticationService {
 	 */
 	_loginVaultCreation = async (password: string, selectedAddress: string) => {
 		// Restore vault with user entered password
+		console.log('_loginVaultCreation begins');
 		const { KeyringController }: any = Engine.context;
 		await KeyringController.submitPassword(password);
+		// fails before here
+		console.log('_loginVaultCreation submitPassword');
 		const encryptionLib = await AsyncStorage.getItem(ENCRYPTION_LIB);
 		const existingUser = await AsyncStorage.getItem(EXISTING_USER);
 		if (encryptionLib !== ORIGINAL && existingUser) {
@@ -189,8 +192,11 @@ class AuthenticationService {
 	 */
 	userEntryAuth = async (password: string, authData: AuthData, selectedAddress: string) => {
 		try {
+			console.log('userEntryAuth begin');
 			await this._loginVaultCreation(password, selectedAddress);
+			console.log('userEntryAuth _loginVaultCreation');
 			await this.storePassword(password, authData.type);
+			console.log('userEntryAuth storePassword');
 			this.store?.dispatch(logIn());
 			this.authData = authData;
 		} catch (e: any) {

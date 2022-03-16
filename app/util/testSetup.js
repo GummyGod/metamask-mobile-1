@@ -162,9 +162,9 @@ if (!global.atob) {
 }
 
 const mockAes = {
-	encrypt: jest.fn(() => Promise.resolve({ data: {} })),
+	encrypt: jest.fn(() => Promise.resolve()),
 	decrypt: jest.fn(),
-	pbkdf2: jest.fn(),
+	pbkdf2: jest.fn(() => '0'),
 	hmac256: jest.fn(),
 	hmac512: jest.fn(),
 	sha1: jest.fn(),
@@ -180,9 +180,9 @@ NativeModules.Aes = {
 };
 
 const mockAesForked = {
-	encrypt: jest.fn(() => Promise.resolve({ data: {} })),
+	encrypt: jest.fn(() => Promise.resolve()),
 	decrypt: jest.fn(),
-	pbkdf2: jest.fn(),
+	pbkdf2: jest.fn(() => '0'),
 	hmac256: jest.fn(),
 	sha1: jest.fn(),
 	sha256: jest.fn(),

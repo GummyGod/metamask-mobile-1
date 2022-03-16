@@ -7,8 +7,7 @@ import AUTHENTICATION_TYPE from '../constants/userProperties';
 import * as Keychain from 'react-native-keychain';
 import Engine from './Engine';
 
-//const Aes = NativeModules.Aes;
-// const AesForked = NativeModules.AesForked;
+
 describe('AuthenticationService', () => {
 	const mockStore = configureMockStore();
 	const initialState = {
@@ -125,7 +124,7 @@ describe('AuthenticationService', () => {
 	// });
 
 	it('should successfully complete userEntryAuth', async () => {
-		// //Create new wallet
+		// Create new wallet
 		await AuthenticationService.newWalletAndKeyChain('test1234', {
 			type: AUTHENTICATION_TYPE.PASSWORD,
 			biometryType: undefined,

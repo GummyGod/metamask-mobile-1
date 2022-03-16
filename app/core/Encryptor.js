@@ -42,7 +42,9 @@ export default class Encryptor {
 	 */
 	encrypt = async (password, object) => {
 		const salt = this._generateSalt(16);
+		console.log('salt', salt);
 		const key = await this._keyFromPassword(password, salt, 'original');
+		console.log('key', salt);
 		const result = await this._encryptWithKey(JSON.stringify(object), key);
 		result.salt = salt;
 		result.lib = 'original';
@@ -58,9 +60,13 @@ export default class Encryptor {
 	 * @returns - Promise resolving to decrypted data object
 	 */
 	decrypt = async (password, encryptedString) => {
+		console.log('decrypt is called');
 		const encryptedData = JSON.parse(encryptedString);
 		const key = await this._keyFromPassword(password, encryptedData.salt, encryptedData.lib);
+		console.log('key', key);
 		const data = await this._decryptWithKey(encryptedData, key, encryptedData.lib);
+		// ^ this is the issue
+		console.log('data', data);
 		return JSON.parse(data);
 	};
 }
