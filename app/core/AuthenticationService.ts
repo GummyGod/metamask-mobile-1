@@ -33,7 +33,7 @@ class AuthenticationService {
 	 * @param password - password entered on login
 	 * @param selectedAddress - current address pulled from persisted state
 	 */
-	_loginVaultCreation = async (password: string, selectedAddress: string) => {
+	private loginVaultCreation = async (password: string, selectedAddress: string) => {
 		// Restore vault with user entered password
 		console.log('_loginVaultCreation begins');
 		const { KeyringController }: any = Engine.context;
@@ -58,7 +58,7 @@ class AuthenticationService {
 	 * @param parsedSeed - provided seed
 	 * @param clearEngine - clear the engine state before restoring vault
 	 */
-	_newWalletVaultAndRestore = async (password: string, parsedSeed: string, clearEngine: boolean) => {
+	private newWalletVaultAndRestore = async (password: string, parsedSeed: string, clearEngine: boolean) => {
 		// Restore vault with user entered password
 		const { KeyringController }: any = Engine.context;
 		if (clearEngine) await Engine.resetState();
@@ -70,7 +70,7 @@ class AuthenticationService {
 	 * This method creates a new wallet with all new data
 	 * @param password - password provided by user, biometric, pincode
 	 */
-	_createWalletVaultAndKeychain = async (password: string) => {
+	private createWalletVaultAndKeychain = async (password: string) => {
 		const { KeyringController }: any = Engine.context;
 		await Engine.resetState();
 		await KeyringController.createNewVaultAndKeychain(password);
@@ -83,7 +83,7 @@ class AuthenticationService {
 		const { KeyringController }: any = Engine.context;
 		// Restore vault with empty password
 		await KeyringController.submitPassword('');
-		// await this._createWalletVaultAndKeychain('');
+		await this.createWalletVaultAndKeychain('');
 		await SecureKeychain.resetGenericPassword();
 	};
 
@@ -135,7 +135,7 @@ class AuthenticationService {
 	 * @param rememberMe - remember me setting (//TODO: to be removed)
 	 * @returns @AuthData
 	 */
-	componentAUTHENTICATION_TYPE = async (biometryChoice: boolean, rememberMe: boolean) => {
+	componentAuthenticationType = async (biometryChoice: boolean, rememberMe: boolean) => {
 		const authType = await this.checkAuthenticationMethod(undefined);
 		if (rememberMe && !biometryChoice)
 			return { type: AUTHENTICATION_TYPE.REMEMBER_ME, biometryType: authType.biometryType };
@@ -147,9 +147,9 @@ class AuthenticationService {
 	 * @param password - password provided by user
 	 * @param authData - type of authentication required to fetch password from keychain
 	 */
-	newWalletAndKeyChain = async (password: string, authData: AuthData) => {
+	newWalletAndKeychain = async (password: string, authData: AuthData) => {
 		try {
-			await this._createWalletVaultAndKeychain(password);
+			await this.createWalletVaultAndKeychain(password);
 			await this.storePassword(password, authData?.type);
 			await AsyncStorage.setItem(EXISTING_USER, TRUE);
 			await AsyncStorage.removeItem(SEED_PHRASE_HINTS);
@@ -171,7 +171,7 @@ class AuthenticationService {
 	 */
 	newWalletAndRestore = async (password: string, authData: AuthData, parsedSeed: string, clearEngine: boolean) => {
 		try {
-			await this._newWalletVaultAndRestore(password, parsedSeed, clearEngine);
+			await this.newWalletVaultAndRestore(password, parsedSeed, clearEngine);
 			await this.storePassword(password, authData.type);
 			await AsyncStorage.setItem(EXISTING_USER, TRUE);
 			await AsyncStorage.removeItem(SEED_PHRASE_HINTS);
@@ -193,7 +193,7 @@ class AuthenticationService {
 	userEntryAuth = async (password: string, authData: AuthData, selectedAddress: string) => {
 		try {
 			console.log('userEntryAuth begin');
-			await this._loginVaultCreation(password, selectedAddress);
+			await this.loginVaultCreation(password, selectedAddress);
 			console.log('userEntryAuth _loginVaultCreation');
 			await this.storePassword(password, authData.type);
 			console.log('userEntryAuth storePassword');
@@ -214,7 +214,7 @@ class AuthenticationService {
 		const credentials: any = await SecureKeychain.getGenericPassword();
 		try {
 			const password = credentials?.password;
-			await this._loginVaultCreation(password, selectedAddress);
+			await this.loginVaultCreation(password, selectedAddress);
 			if (!credentials) await this.storePassword(password, this.authData.type);
 			this.store?.dispatch(logIn());
 		} catch (e: any) {
@@ -252,8 +252,8 @@ export default {
 		await instance?.userEntryAuth(password, authType, selectedAddress),
 	appTriggeredAuth: async (selectedAddress: string) => await instance?.appTriggeredAuth(selectedAddress),
 	logout: async () => await instance?.logout(),
-	newWalletAndKeyChain: async (password: string, type: AuthData) => {
-		await instance?.newWalletAndKeyChain(password, type);
+	newWalletAndKeychain: async (password: string, type: AuthData) => {
+		await instance?.newWalletAndKeychain(password, type);
 	},
 	newWalletAndRestore: async (password: string, type: AuthData, parsedSeed: string, clearEngine: boolean) => {
 		await instance?.newWalletAndRestore(password, type, parsedSeed, clearEngine);
@@ -264,6 +264,6 @@ export default {
 		await instance?.storePassword(password, authType);
 	},
 	getPassword: async () => await instance?.getPassword(),
-	componentAUTHENTICATION_TYPE: async (biometryChoice: boolean, rememberMe: boolean) =>
-		await instance?.componentAUTHENTICATION_TYPE(biometryChoice, rememberMe),
+	componentAuthenticationType: async (biometryChoice: boolean, rememberMe: boolean) =>
+		await instance?.componentAuthenticationType(biometryChoice, rememberMe),
 };

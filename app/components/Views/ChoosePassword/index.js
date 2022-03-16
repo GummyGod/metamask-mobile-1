@@ -334,13 +334,13 @@ class ChoosePassword extends PureComponent {
 			this.setState({ loading: true });
 			const previous_screen = this.props.route.params?.[PREVIOUS_SCREEN];
 
-			const authType = await AuthenticationService.componentAUTHENTICATION_TYPE(
+			const authType = await AuthenticationService.componentAuthenticationType(
 				this.state.biometryChoice,
 				this.state.rememberMe
 			);
 
 			if (previous_screen === ONBOARDING) {
-				await AuthenticationService.newWalletAndKeyChain(password, authType);
+				await AuthenticationService.newWalletAndKeychain(password, authType);
 				this.keyringControllerPasswordSet = true;
 				this.props.seedphraseNotBackedUp();
 				await AsyncStorage.removeItem(NEXT_MAKER_REMINDER);
