@@ -93,6 +93,7 @@ class AuthenticationService {
 	 * @param authType - type of authentication required to fetch password from keychain
 	 */
 	storePassword = async (password: string, authType: AUTHENTICATION_TYPE) => {
+		console.log(SecureKeychain);
 		if (authType === AUTHENTICATION_TYPE.BIOMETRIC) {
 			await SecureKeychain.setGenericPassword(password, SecureKeychain.TYPES.BIOMETRICS);
 		} else if (authType === AUTHENTICATION_TYPE.PASSCODE) {

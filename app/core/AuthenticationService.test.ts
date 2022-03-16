@@ -5,6 +5,7 @@ import AuthenticationService from './AuthenticationService';
 import AUTHENTICATION_TYPE from '../constants/userProperties';
 // eslint-disable-next-line import/no-namespace
 import * as Keychain from 'react-native-keychain';
+import * as SecureKeychain from './SecureKeychain';
 import Engine from './Engine';
 
 describe('AuthenticationService', () => {
@@ -34,6 +35,42 @@ describe('AuthenticationService', () => {
 	beforeEach(() => {
 		Engine.init(initialState.engine.backgroundState);
 		AuthenticationService.init(store);
+		//Mocked SecureKeychain
+		SecureKeychain.default = {
+			init: jest.fn(),
+			getInstance: jest.fn(),
+			getSupportedBiometryType: jest.fn(),
+			resetGenericPassword: jest.fn(),
+			getGenericPassword: jest.fn(),
+			setGenericPassword: jest.fn(),
+			ACCESS_CONTROL: {
+				USER_PRESENCE: 'UserPresence',
+				BIOMETRY_ANY: 'BiometryAny',
+				BIOMETRY_CURRENT_SET: 'BiometryCurrentSet',
+				DEVICE_PASSCODE: 'DevicePasscode',
+				APPLICATION_PASSWORD: 'ApplicationPassword',
+				BIOMETRY_ANY_OR_DEVICE_PASSCODE: 'BiometryAnyOrDevicePasscode',
+				BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE: 'BiometryCurrentSetOrDevicePasscode',
+			},
+			ACCESSIBLE: {
+				WHEN_UNLOCKED: 'AccessibleWhenUnlocked',
+				AFTER_FIRST_UNLOCK: 'AccessibleAfterFirstUnlock',
+				ALWAYS: 'AccessibleAlways',
+				WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 'AccessibleWhenPasscodeSetThisDeviceOnly',
+				WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'AccessibleWhenUnlockedThisDeviceOnly',
+				AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 'AccessibleAfterFirstUnlockThisDeviceOnly',
+				ALWAYS_THIS_DEVICE_ONLY: 'AccessibleAlwaysThisDeviceOnly',
+			},
+			AUTHENTICATION_TYPE: {
+				DEVICE_PASSCODE_OR_BIOMETRICS: 'AuthenticationWithBiometricsDevicePasscode',
+				BIOMETRICS: 'AuthenticationWithBiometrics',
+			},
+			TYPES: {
+				BIOMETRICS: 'BIOMETRICS',
+				PASSCODE: 'PASSCODE',
+				REMEMBER_ME: 'REMEMBER_ME',
+			},
+		};
 	});
 
 	afterEach(() => {
@@ -117,6 +154,13 @@ describe('AuthenticationService', () => {
 		expect(methodCalled).toBeTruthy();
 	});
 
+	it('should return set a password using BIOMETRIC', async () => {
+		let methodCalled = false;
+		Keychain.resetGenericPassword = jest.fn().mockReturnValue((methodCalled = true));
+		await AuthenticationService.storePassword('1234', AUTHENTICATION_TYPE.BIOMETRIC);
+		expect(methodCalled).toBeTruthy();
+	});
+
 	// it('should reset a password', async () => {
 	// 	let methodCalled = false;
 	// 	Keychain.resetGenericPassword = jest.fn().mockReturnValue((methodCalled = true));
@@ -124,16 +168,16 @@ describe('AuthenticationService', () => {
 	// 	expect(methodCalled).toBeTruthy();
 	// });
 
-	// it('should successfully complete userEntryAuth', async () => {
-	// 	// Create new wallet
-	// 	await AuthenticationService.newWalletAndKeychain('test1234', {
-	// 		type: AUTHENTICATION_TYPE.PASSWORD,
-	// 		biometryType: undefined,
-	// 	});
-	// 	await AuthenticationService.userEntryAuth(
-	// 		'test',
-	// 		{ type: AUTHENTICATION_TYPE.PASSWORD, biometryType: undefined },
-	// 		'0x000'
-	// 	);
-	// });
+	it('should successfully complete userEntryAuth', async () => {
+		// Create new wallet
+		// await AuthenticationService.newWalletAndKeychain('test1234', {
+		// 	type: AUTHENTICATION_TYPE.PASSWORD,
+		// 	biometryType: undefined,
+		// });
+		await AuthenticationService.userEntryAuth(
+			'test',
+			{ type: AUTHENTICATION_TYPE.PASSWORD, biometryType: undefined },
+			'0x000'
+		);
+	});
 });
