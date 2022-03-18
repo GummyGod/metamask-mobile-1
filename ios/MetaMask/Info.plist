@@ -124,5 +124,7 @@
 	<string>$(MM_FOX_CODE)</string>
 	<key>mixpanel_token</key>
 	<string>$(MM_MIXPANEL_TOKEN)</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+  <string>Metamask needs Bluetooth access to connect to external devices.</string>
 </dict>
 </plist>
