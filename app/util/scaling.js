@@ -51,4 +51,7 @@ const scale = (size, { factor = 1, scaleVertical = false, scaleUp = false, baseS
 
 const scaleVertical = (size, options) => scale(size, { scaleVertical: true, ...options });
 
+export const { width: deviceWidth, height: deviceHeight } = Dimensions.get('window');
+
+
 export default { scale, scaleVertical, IPHONE_6_WIDTH, IPHONE_6_HEIGHT };
