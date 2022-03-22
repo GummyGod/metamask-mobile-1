@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView, TextStyle, Dimensions, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, SafeAreaView, TextStyle, Platform, Alert } from 'react-native';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
 import { check, checkMultiple, PERMISSIONS, RESULTS, request as requestPermission } from 'react-native-permissions';
 import Scan from './Scan';
+import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
 
 const createStyles = (colors: any) =>
@@ -31,20 +32,42 @@ const createStyles = (colors: any) =>
 	});
 
 const LedgerConnect = () => {
+	const { KeyringController, AccountTrackerController } = Engine.context;
 	const { colors } = useAppThemeFromContext() || mockTheme;
 	const styles = createStyles(colors);
 	const [hasBluetoothPermission, setHasBluetoothPermission] = useState<boolean>(false);
 	const [transport, setTransport] = useState(null);
+	const [defaultAccount, setDefaultAccount] = useState<string | null>(null);
 
-	const onDeviceSelected = useCallback(async (device) => {
-		const bleTransport = await TransportBLE.open(device);
+	const onDeviceSelected = useCallback(
+		async (_device) => {
+			const bleTransport = await TransportBLE.open(_device);
 
-		bleTransport.on('disconnect', () => {
-			setTransport(null);
-		});
+			bleTransport.on('disconnect', () => {
+				setTransport(null);
+			});
 
-		setTransport(bleTransport);
-	}, []);
+			setTransport(bleTransport);
+		},
+
+		[]
+	);
+
+	const onContinueOpenEthApp = useCallback(async () => {
+		await KeyringController.unlockLedgerDefaultAccount();
+	}, [KeyringController]);
+
+	useEffect(() => {
+		if (transport) {
+			KeyringController.connectLedgerHardware(transport).then((_accounts: string[]) => {
+				setDefaultAccount(_accounts[0]);
+			});
+		}
+	}, [KeyringController, transport]);
+
+	useEffect(() => {
+		AccountTrackerController.syncWithAddresses([defaultAccount]);
+	}, [AccountTrackerController, defaultAccount]);
 
 	useEffect(() => {
 		if (Platform.OS === 'ios') {
