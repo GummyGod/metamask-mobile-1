@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView, TextStyle, Platform, Alert } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet, Image, SafeAreaView, TextStyle, Platform, Alert } from 'react-native';
+import Text from '../../../components/Base/Text';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
@@ -7,6 +8,7 @@ import { check, checkMultiple, PERMISSIONS, RESULTS, request as requestPermissio
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
+import { useNavigation } from '@react-navigation/native';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -16,6 +18,7 @@ const createStyles = (colors: any) =>
 		},
 		connectLedgerWrapper: {
 			marginLeft: deviceWidth * 0.07,
+			marginRight: deviceWidth * 0.07,
 		},
 		ledgerImage: {
 			width: 68,
@@ -32,38 +35,48 @@ const createStyles = (colors: any) =>
 	});
 
 const LedgerConnect = () => {
-	const { KeyringController, AccountTrackerController } = Engine.context;
-	const { colors } = useAppThemeFromContext() || mockTheme;
-	const styles = createStyles(colors);
+	const { KeyringController, AccountTrackerController } = Engine.context as any;
+	const { colors } = useAppThemeFromContext() ?? mockTheme;
+	const navigation = useNavigation();
+	const styles = useMemo(() => createStyles(colors), [colors]);
 	const [hasBluetoothPermission, setHasBluetoothPermission] = useState<boolean>(false);
 	const [transport, setTransport] = useState(null);
 	const [defaultAccount, setDefaultAccount] = useState<string | null>(null);
 
 	const onDeviceSelected = useCallback(
 		async (_device) => {
-			const bleTransport = await TransportBLE.open(_device);
+			try {
+				const bleTransport = await TransportBLE.open(_device);
 
-			bleTransport.on('disconnect', () => {
-				setTransport(null);
-			});
+				bleTransport.on('disconnect', () => {
+					console.log('disconnected');
+					setTransport(null);
+				});
 
-			setTransport(bleTransport);
+				setTransport(bleTransport);
+			} catch (e) {
+				console.log('e', e);
+				Alert.alert('Ledger unavailable', 'Please unlock your ledger and open the Ethereum app');
+			}
 		},
-
-		[]
+		[navigation]
 	);
 
-	const onContinueOpenEthApp = useCallback(async () => {
-		await KeyringController.unlockLedgerDefaultAccount();
-	}, [KeyringController]);
-
 	useEffect(() => {
-		if (transport) {
-			KeyringController.connectLedgerHardware(transport).then((_accounts: string[]) => {
-				setDefaultAccount(_accounts[0]);
-			});
-		}
-	}, [KeyringController, transport]);
+		console.log('transport', transport);
+		const test = async () => {
+			if (transport) {
+				console.log('gets in if transport');
+				KeyringController.connectLedgerHardware(transport).then((_accounts: string[]) => {
+					setDefaultAccount(_accounts[0]);
+				});
+				await KeyringController.unlockLedgerDefaultAccount();
+				navigation.navigate('WalletView');
+			}
+		};
+
+		test();
+	}, [KeyringController, navigation, transport]);
 
 	useEffect(() => {
 		AccountTrackerController.syncWithAddresses([defaultAccount]);
@@ -115,14 +128,11 @@ const LedgerConnect = () => {
 		<SafeAreaView style={styles.container}>
 			<View style={styles.connectLedgerWrapper}>
 				<Image source={require('../../../images/ledger.png')} style={styles.ledgerImage} />
-				<Text style={styles.connectLedgerText}> Connect Ledger </Text>
+				<Text bold style={styles.connectLedgerText}>
+					Connect Ledger
+				</Text>
 				<View style={styles.bodyContainer}>
-					{hasBluetoothPermission &&
-						(transport ? (
-							<Text> Open the Ethereum app</Text>
-						) : (
-							<Scan onDeviceSelected={onDeviceSelected} />
-						))}
+					{hasBluetoothPermission && <Scan onDeviceSelected={onDeviceSelected} />}
 					{!hasBluetoothPermission && <Text> Your Bluetooth is disabled</Text>}
 				</View>
 			</View>

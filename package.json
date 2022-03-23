@@ -98,6 +98,7 @@
     "@exodus/react-native-payments": "git+https://github.com/MetaMask/react-native-payments.git#dbc8cbbed570892d2fea5e3d183bf243e062c1e5",
     "@ledgerhq/hw-app-eth": "^6.26.1",
     "@ledgerhq/hw-transport": "^6.24.1",
+    "@ledgerhq/logs": "^6.10.0",
     "@ledgerhq/react-native-hw-transport-ble": "^6.25.1",
     "@metamask/contract-metadata": "^1.30.0",
     "@metamask/controllers": "26.0.0",
