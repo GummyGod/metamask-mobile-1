@@ -4,7 +4,7 @@ import Text from '../../../components/Base/Text';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { useNavigation } from '@react-navigation/native';
 import { listen } from '@ledgerhq/logs';
-import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
+import { useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
 import { check, checkMultiple, PERMISSIONS, RESULTS, request as requestPermission } from 'react-native-permissions';
 import Scan from './Scan';
@@ -37,7 +37,9 @@ const createStyles = (colors: any) =>
 
 const LedgerConnect = () => {
 	const { KeyringController, AccountTrackerController } = Engine.context as any;
-	const { colors } = useAppThemeFromContext() ?? mockTheme;
+	const { colors } = useAppThemeFromContext();
+	const [rerender, setRerender] = useState<boolean>(false);
+
 	const navigation = useNavigation();
 	const styles = useMemo(() => createStyles(colors), [colors]);
 	const [hasBluetoothPermission, setHasBluetoothPermission] = useState<boolean>(false);
@@ -62,7 +64,10 @@ const LedgerConnect = () => {
 				setTransport(bleTransport);
 			}
 		} catch (e) {
-			Alert.alert('Ledger unavailable', 'Please make sure your Ledger is turned on');
+			Alert.alert(
+				'Ledger unavailable',
+				'Please make sure your Ledger is turned on and your Bluetooth is enabled'
+			);
 		}
 	};
 
@@ -70,18 +75,27 @@ const LedgerConnect = () => {
 		const connectAndUnlockDevice = async () => {
 			try {
 				if (transport) {
-					const _accounts = await KeyringController.connectLedgerHardware(transport);
+					const appName = await KeyringController.connectLedgerHardware(transport);
+					if (appName !== 'Ethereum') {
+						throw new Error('Please open the Ethereum app on your device.');
+					}
+					// const _accounts = await KeyringController.getDefaultLedgerAccount(transport);
+					const _accounts = await KeyringController.unlockLedgerDefaultAccount();
 					setDefaultAccount(_accounts[0]);
-					await KeyringController.unlockLedgerDefaultAccount();
+					setRerender(!rerender);
+
 					navigation.navigate('WalletView');
 				}
 			} catch (e) {
-				Alert.alert('Ledger unavailable', 'Please open the Ethereum app on your device');
+				Alert.alert(
+					'Ledger unavailable',
+					'Please make sure your device is unlocked and the Ethereum app is running'
+				);
 			}
 		};
 
 		connectAndUnlockDevice();
-	}, [KeyringController, navigation, transport]);
+	}, [KeyringController, navigation, rerender, transport]);
 
 	useEffect(() => {
 		AccountTrackerController.syncWithAddresses([defaultAccount]);

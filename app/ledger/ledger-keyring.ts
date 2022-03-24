@@ -46,6 +46,8 @@ export default class LedgerKeyring {
 
 	private hdPath: string = hdPathString;
 
+	private transport?: Transport;
+
 	private accounts: Account[] = [];
 
 	private app?: EthereumApp;
@@ -157,11 +159,20 @@ export default class LedgerKeyring {
 	};
 
 	setTransport = (transport: Transport) => {
+		this.transport = transport;
 		this.app = new AppEth(transport);
 	};
 
 	setApp = (app: EthereumApp): void => {
 		this.app = app;
+	};
+
+	getRunningApp = async (): string => {
+		const app = this._getApp();
+
+		const runningApp = await app.getAppAndVersion();
+
+		return runningApp.name;
 	};
 
 	private _getApp = (): EthereumApp => {
@@ -182,5 +193,33 @@ export default class LedgerKeyring {
 		}
 
 		return account.hdPath;
+	};
+
+	getAppAndVersion = async (): Promise<{
+		appName: string;
+		version: string;
+	}> => {
+		if (!this.transport) {
+			throw new Error('Ledger transport is not initialized. You must call setTransport first.');
+		}
+
+		const response = await this.transport.send(0xb0, 0x01, 0x00, 0x00);
+
+		let i = 0;
+		const format = response[i++];
+
+		if (format !== 1) {
+			throw new Error('getAppAndVersion: format not supported');
+		}
+
+		const nameLength = response[i++];
+		const appName = response.slice(i, (i += nameLength)).toString('ascii');
+		const versionLength = response[i++];
+		const version = response.slice(i, (i += versionLength)).toString('ascii');
+
+		return {
+			appName,
+			version,
+		};
 	};
 }

@@ -50,7 +50,7 @@ const createStyles = (colors: Colors) =>
 
 const LedgerDevice = ({ onSelect, device }: Props) => {
 	const [pending, setPending] = useState(false);
-	const { colors } = useAppThemeFromContext() || mockTheme;
+	const { colors } = useAppThemeFromContext();
 
 	const styles = useMemo(() => createStyles(colors), [colors]);
 
