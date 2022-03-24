@@ -17,6 +17,7 @@ import {
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
+import Transport from '@ledgerhq/hw-transport';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -59,6 +60,25 @@ const LedgerConnect = () => {
 		});
 	}, []);
 
+	const connectAndUnlockDevice = async (transport: Transport) => {
+		try {
+			const appName = await KeyringController.connectLedgerHardware(transport);
+			if (appName !== 'Ethereum') {
+				throw new Error('Please open the Ethereum app on your device.');
+			}
+			// const _accounts = await KeyringController.getDefaultLedgerAccount(transport);
+			const _accounts = await KeyringController.unlockLedgerDefaultAccount();
+			setDefaultAccount(_accounts[0]);
+
+			navigation.navigate('WalletView');
+		} catch (e) {
+			Alert.alert(
+				'Ledger unavailable',
+				'Please make sure your device is unlocked and the Ethereum app is running'
+			);
+		}
+	};
+
 	const onDeviceSelected = async (_device) => {
 		try {
 			if (!transport) {
@@ -69,6 +89,7 @@ const LedgerConnect = () => {
 				});
 
 				setTransport(bleTransport);
+				connectAndUnlockDevice(bleTransport);
 			}
 		} catch (e) {
 			Alert.alert(
@@ -78,80 +99,76 @@ const LedgerConnect = () => {
 		}
 	};
 
-	useEffect(() => {
-		const connectAndUnlockDevice = async () => {
-			try {
-				if (transport) {
-					const appName = await KeyringController.connectLedgerHardware(transport);
-					if (appName !== 'Ethereum') {
-						throw new Error('Please open the Ethereum app on your device.');
-					}
-					// const _accounts = await KeyringController.getDefaultLedgerAccount(transport);
-					const _accounts = await KeyringController.unlockLedgerDefaultAccount();
-					setDefaultAccount(_accounts[0]);
-					setRerender(!rerender);
-
-					navigation.navigate('WalletView');
-				}
-			} catch (e) {
-				Alert.alert(
-					'Ledger unavailable',
-					'Please make sure your device is unlocked and the Ethereum app is running'
-				);
-			}
-		};
-
-		connectAndUnlockDevice();
-	}, [KeyringController, navigation, rerender, transport]);
+	// useEffect(() => {
+	// 	if(transport) {
+	// 		connectAndUnlockDevice(transport);
+	// 	}
+	// }, [KeyringController, navigation, transport]);
 
 	useEffect(() => {
 		AccountTrackerController.syncWithAddresses([defaultAccount]);
 	}, [AccountTrackerController, defaultAccount]);
 
+	const checkPermissions = (result, permissionsToRequest) => {
+		switch (result) {
+			case RESULTS.UNAVAILABLE:
+				Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
+				break;
+			case RESULTS.DENIED:
+				setHasBluetoothPermission(false);
+				Alert.alert('Access denied', 'Bluetooth access was denied by this device', [
+					{
+						text: 'Cancel',
+						style: 'cancel',
+					},
+					{
+						text: 'Enable bluetooth access',
+						onPress: async () => {
+							await requestPermission(permissionsToRequest);
+						},
+					},
+				]);
+				break;
+			case RESULTS.BLOCKED:
+				Alert.alert(
+					'Access blocked',
+					'Bluetooth access was blocked by this device. Please enable access from settings.',
+					[
+						{
+							text: 'Open Settings',
+							onPress: async () => {
+								await openSettings();
+							},
+						},
+					]
+				);
+				break;
+			case RESULTS.GRANTED:
+				return true;
+				break;
+		}
+	};
+
 	useEffect(() => {
 		if (Platform.OS === 'ios') {
 			check(PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL).then((result) => {
-				switch (result) {
-					case RESULTS.UNAVAILABLE:
-						Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
-						break;
-					case RESULTS.DENIED:
-						setHasBluetoothPermission(false);
-						Alert.alert('Access denied', 'Bluetooth access was denied by this device', [
-							{
-								text: 'Cancel',
-								style: 'cancel',
-							},
-							{
-								text: 'Enable bluetooth access',
-								onPress: async () => {
-									await requestPermission(PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL);
-								},
-							},
-						]);
-						break;
-					case RESULTS.BLOCKED:
-						Alert.alert(
-							'Access blocked',
-							'Bluetooth access was blocked by this device. Please enable access from settings.',
-							[
-								{
-									text: 'Open Settings',
-									onPress: async () => {
-										await openSettings();
-									},
-								},
-							]
-						);
-						break;
-					case RESULTS.GRANTED:
-						setHasBluetoothPermission(true);
-						break;
-				}
+				const hasPermission = checkPermissions(result, PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL);
+				hasPermission && setHasBluetoothPermission(true);
 			});
 		} else if (Platform.OS === 'android') {
 			checkMultiple([PERMISSIONS.ANDROID.BLUETOOTH_CONNECT, PERMISSIONS.ANDROID.BLUETOOTH_SCAN]).then(
-				(statuses) => {}
+				(statuses) => {
+					const hasBluetoothConnectPermission = checkPermissions(
+						statuses[PERMISSIONS.ANDROID.BLUETOOTH_CONNECT],
+						PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
+					);
+					const hasBluetoothScanPermission = checkPermissions(
+						statuses[PERMISSIONS.ANDROID.BLUETOOTH_SCAN],
+						PERMISSIONS.ANDROID.BLUETOOTH_SCAN
+					);
+
+					hasBluetoothConnectPermission && hasBluetoothScanPermission && setHasBluetoothPermission(true);
+				}
 			);
 		}
 	}, []);
