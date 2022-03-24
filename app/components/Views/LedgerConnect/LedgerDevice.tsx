@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Text, TouchableOpacity, ActivityIndicator, View, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Colors } from '../../../util/theme/models';
@@ -54,11 +54,11 @@ const LedgerDevice = ({ onSelect, device }: Props) => {
 
 	const styles = useMemo(() => createStyles(colors), [colors]);
 
-	const onPress = useCallback(async () => {
+	const onPress = async () => {
 		setPending(true);
 		await onSelect(device);
 		setPending(false);
-	}, [device, onSelect]);
+	};
 
 	return (
 		<>

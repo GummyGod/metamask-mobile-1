@@ -1,14 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Image, SafeAreaView, TextStyle, Platform, Alert } from 'react-native';
 import Text from '../../../components/Base/Text';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
+import { useNavigation } from '@react-navigation/native';
+import { listen } from '@ledgerhq/logs';
 import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
 import { check, checkMultiple, PERMISSIONS, RESULTS, request as requestPermission } from 'react-native-permissions';
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
-import { useNavigation } from '@react-navigation/native';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -43,39 +44,43 @@ const LedgerConnect = () => {
 	const [transport, setTransport] = useState(null);
 	const [defaultAccount, setDefaultAccount] = useState<string | null>(null);
 
-	const onDeviceSelected = useCallback(
-		async (_device) => {
-			try {
+	useEffect(() => {
+		listen((event) => {
+			console.log('test', event);
+		});
+	}, []);
+
+	const onDeviceSelected = async (_device) => {
+		try {
+			if (!transport) {
 				const bleTransport = await TransportBLE.open(_device);
 
-				bleTransport.on('disconnect', () => {
-					console.log('disconnected');
+				bleTransport.on('disconnect', async () => {
 					setTransport(null);
 				});
 
 				setTransport(bleTransport);
-			} catch (e) {
-				console.log('e', e);
-				Alert.alert('Ledger unavailable', 'Please unlock your ledger and open the Ethereum app');
 			}
-		},
-		[navigation]
-	);
+		} catch (e) {
+			Alert.alert('Ledger unavailable', 'Please make sure your Ledger is turned on');
+		}
+	};
 
 	useEffect(() => {
-		console.log('transport', transport);
-		const test = async () => {
-			if (transport) {
-				console.log('gets in if transport');
-				KeyringController.connectLedgerHardware(transport).then((_accounts: string[]) => {
+		const connectAndUnlockDevice = async () => {
+			try {
+				if (transport) {
+					const _accounts = await KeyringController.connectLedgerHardware(transport);
 					setDefaultAccount(_accounts[0]);
-				});
-				await KeyringController.unlockLedgerDefaultAccount();
-				navigation.navigate('WalletView');
+					await KeyringController.unlockLedgerDefaultAccount();
+					navigation.navigate('WalletView');
+				}
+			} catch (e) {
+				Alert.alert('Ledger unavailable', 'Please open the Ethereum app on your device');
 			}
 		};
 
-		test();
+		connectAndUnlockDevice();
 	}, [KeyringController, navigation, transport]);
 
 	useEffect(() => {

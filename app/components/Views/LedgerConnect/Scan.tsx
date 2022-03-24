@@ -47,16 +47,15 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 		return subscription;
 	}, [devices]);
 
-	const onSelect = useCallback(
-		async (_device) => {
-			try {
-				await onDeviceSelected(_device);
-			} catch (_error) {
-				setError(_error);
-			}
-		},
-		[onDeviceSelected]
-	);
+	const onSelect = async (_device) => {
+		try {
+			console.log('run onSelect');
+			await onDeviceSelected(_device);
+		} catch (_error) {
+			console.log('catch onSelect');
+			setError(_error);
+		}
+	};
 
 	useEffect(() => {
 		const subscription = startScan();
