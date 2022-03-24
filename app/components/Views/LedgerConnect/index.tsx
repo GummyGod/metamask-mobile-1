@@ -4,9 +4,16 @@ import Text from '../../../components/Base/Text';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { useNavigation } from '@react-navigation/native';
 import { listen } from '@ledgerhq/logs';
-import { useAppThemeFromContext } from '../../../util/theme';
+import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
-import { check, checkMultiple, PERMISSIONS, RESULTS, request as requestPermission } from 'react-native-permissions';
+import {
+	check,
+	checkMultiple,
+	PERMISSIONS,
+	RESULTS,
+	request as requestPermission,
+	openSettings,
+} from 'react-native-permissions';
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
@@ -37,7 +44,7 @@ const createStyles = (colors: any) =>
 
 const LedgerConnect = () => {
 	const { KeyringController, AccountTrackerController } = Engine.context as any;
-	const { colors } = useAppThemeFromContext();
+	const { colors } = useAppThemeFromContext() ?? mockTheme;
 	const [rerender, setRerender] = useState<boolean>(false);
 
 	const navigation = useNavigation();
@@ -126,7 +133,15 @@ const LedgerConnect = () => {
 					case RESULTS.BLOCKED:
 						Alert.alert(
 							'Access blocked',
-							'Bluetooth access was blocked by this device. Please enable access from settings.'
+							'Bluetooth access was blocked by this device. Please enable access from settings.',
+							[
+								{
+									text: 'Open Settings',
+									onPress: async () => {
+										await openSettings();
+									},
+								},
+							]
 						);
 						break;
 					case RESULTS.GRANTED:
@@ -136,9 +151,7 @@ const LedgerConnect = () => {
 			});
 		} else if (Platform.OS === 'android') {
 			checkMultiple([PERMISSIONS.ANDROID.BLUETOOTH_CONNECT, PERMISSIONS.ANDROID.BLUETOOTH_SCAN]).then(
-				(statuses) => {
-					//TODO
-				}
+				(statuses) => {}
 			);
 		}
 	}, []);
