@@ -104,7 +104,7 @@ const LedgerConnect = () => {
 		AccountTrackerController.syncWithAddresses([defaultAccount]);
 	}, [AccountTrackerController, defaultAccount]);
 
-	const checkPermissions = (result, permissionsToRequest) => {
+	const checkPermissions = (result: string, permissionsToRequest: string) => {
 		switch (result) {
 			case RESULTS.UNAVAILABLE:
 				Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
