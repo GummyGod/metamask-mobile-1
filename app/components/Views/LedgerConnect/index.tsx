@@ -14,6 +14,7 @@ import {
 	RESULTS,
 	request as requestPermission,
 	openSettings,
+	Permission,
 } from 'react-native-permissions';
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
@@ -104,7 +105,7 @@ const LedgerConnect = () => {
 		AccountTrackerController.syncWithAddresses([defaultAccount]);
 	}, [AccountTrackerController, defaultAccount]);
 
-	const checkPermissions = (result: string, permissionsToRequest: string) => {
+	const checkPermissions = (result: string, permissionsToRequest: Permission) => {
 		switch (result) {
 			case RESULTS.UNAVAILABLE:
 				Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
