@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Image, SafeAreaView, TextStyle, Platform, Alert } from 'react-native';
 import Text from '../../../components/Base/Text';
@@ -24,6 +25,7 @@ const createStyles = (colors: any) =>
 		container: {
 			flex: 1,
 			backgroundColor: colors.background.default,
+			alignItems: 'center',
 		},
 		connectLedgerWrapper: {
 			marginLeft: deviceWidth * 0.07,
@@ -38,7 +40,7 @@ const createStyles = (colors: any) =>
 			fontSize: 24,
 		},
 		bodyContainer: {
-			alignItems: 'center',
+			flex: 1,
 			marginTop: deviceHeight * 0.07,
 		},
 	});
@@ -46,7 +48,6 @@ const createStyles = (colors: any) =>
 const LedgerConnect = () => {
 	const { KeyringController, AccountTrackerController } = Engine.context as any;
 	const { colors } = useAppThemeFromContext() ?? mockTheme;
-	const [rerender, setRerender] = useState<boolean>(false);
 
 	const navigation = useNavigation();
 	const styles = useMemo(() => createStyles(colors), [colors]);
@@ -99,12 +100,6 @@ const LedgerConnect = () => {
 		}
 	};
 
-	// useEffect(() => {
-	// 	if(transport) {
-	// 		connectAndUnlockDevice(transport);
-	// 	}
-	// }, [KeyringController, navigation, transport]);
-
 	useEffect(() => {
 		AccountTrackerController.syncWithAddresses([defaultAccount]);
 	}, [AccountTrackerController, defaultAccount]);
@@ -145,7 +140,6 @@ const LedgerConnect = () => {
 				break;
 			case RESULTS.GRANTED:
 				return true;
-				break;
 		}
 	};
 
