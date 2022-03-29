@@ -122,8 +122,10 @@ const LedgerConnect = () => {
 						permissionsToRequest !== PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
 					) {
 						const currentState: State = await BleManager.state();
-						if (currentState === State.PoweredOn) return true;
-					} else {
+
+						if (currentState === State.PoweredOn) {
+							return true;
+						}
 						Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
 					}
 				}
