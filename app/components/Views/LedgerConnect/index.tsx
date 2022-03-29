@@ -59,6 +59,11 @@ const LedgerConnect = () => {
 	const [transport, setTransport] = useState(null);
 	const [defaultAccount, setDefaultAccount] = useState<string | null>(null);
 
+	// const manager = new BleManager();
+	// manager.onStateChange((state) => {
+	// 	console.log('>>>>>> state', state);
+	// }, true);
+
 	useEffect(() => {
 		listen((event) => {
 			console.log('test', event);
@@ -109,28 +114,50 @@ const LedgerConnect = () => {
 	}, [AccountTrackerController, defaultAccount]);
 
 	const checkPermissions = async (result: string, permissionsToRequest: Permission) => {
+		console.log('we are here >>>>>>> 0', systemVersion);
+		console.log('>>>>>> result', result, permissionsToRequest);
+
 		switch (result) {
-			case RESULTS.UNAVAILABLE:
+			case RESULTS.UNAVAILABLE: {
+				console.log('we are here >>>>>>> 0.0.1', Platform.OS);
+
 				if (Platform.OS === 'ios') {
 					Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
 				} else if (Platform.OS === 'android') {
+					console.log('we are here >>>>>>> 0.1');
 					const parsedSystemVersion = Number(systemVersion.split('.')[0]);
+
+					console.log('we are here >>>>>>> 0.1.1', parsedSystemVersion);
+
 					if (parsedSystemVersion > 11) {
 						Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
 					} else if (
 						parsedSystemVersion <= 11 &&
 						permissionsToRequest !== PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
 					) {
-						const currentState: State = await BleManager.state();
+						console.log('we are here >>>>>>> 1');
+						const manager = new BleManager();
+						const currentState: State = await manager.state();
+
+						console.log('we are here >>>>>>> 2', currentState);
 
 						if (currentState === State.PoweredOn) {
 							return true;
+						} else {
+							console.log('>>>>> trying to power on');
+							const res = await manager.enable();
+
+							console.log('>>>>> res', res);
+
+							return true;
 						}
+
 						Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
 					}
 				}
 
 				break;
+			}
 			case RESULTS.DENIED:
 				setHasBluetoothPermission(false);
 				Alert.alert('Access denied', 'Bluetooth access was denied by this device', [
@@ -174,8 +201,8 @@ const LedgerConnect = () => {
 		} else if (Platform.OS === 'android') {
 			checkMultiple([
 				PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-				PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-				PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+				'android.permission.BLUETOOTH_SCAN' as any,
+				'android.permission.BLUETOOTH_CONNECT',
 			]).then((statuses) => {
 				const p1 = checkPermissions(
 					statuses[PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION],
@@ -183,12 +210,12 @@ const LedgerConnect = () => {
 				);
 
 				const p2 = checkPermissions(
-					statuses[PERMISSIONS.ANDROID.BLUETOOTH_SCAN],
-					PERMISSIONS.ANDROID.BLUETOOTH_SCAN
+					statuses['android.permission.BLUETOOTH_SCAN'],
+					'android.permission.BLUETOOTH_SCAN' as any
 				);
 				const p3 = checkPermissions(
-					statuses[PERMISSIONS.ANDROID.BLUETOOTH_CONNECT],
-					PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
+					statuses['android.permission.BLUETOOTH_CONNECT'],
+					'android.permission.BLUETOOTH_CONNECT' as any
 				);
 
 				p1 && p2 && p3 && setHasBluetoothPermission(true);
