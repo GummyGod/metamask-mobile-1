@@ -84,7 +84,6 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 
 	const onSelect = async () => {
 		try {
-			console.log('currentDevice', currentDevice);
 			await onDeviceSelected(currentDevice);
 		} catch (_error) {
 			setError(_error);

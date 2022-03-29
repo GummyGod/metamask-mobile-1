@@ -5,6 +5,8 @@ import Text from '../../../components/Base/Text';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { useNavigation } from '@react-navigation/native';
 import { listen } from '@ledgerhq/logs';
+import Transport from '@ledgerhq/hw-transport';
+import { getSystemVersion } from 'react-native-device-info';
 import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
 import {
@@ -19,7 +21,7 @@ import {
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
-import Transport from '@ledgerhq/hw-transport';
+import { BleManager, State } from 'react-native-ble-plx';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -45,6 +47,7 @@ const createStyles = (colors: any) =>
 			marginTop: deviceHeight * 0.07,
 		},
 	});
+const systemVersion = getSystemVersion();
 
 const LedgerConnect = () => {
 	const { KeyringController, AccountTrackerController } = Engine.context as any;
@@ -105,10 +108,26 @@ const LedgerConnect = () => {
 		AccountTrackerController.syncWithAddresses([defaultAccount]);
 	}, [AccountTrackerController, defaultAccount]);
 
-	const checkPermissions = (result: string, permissionsToRequest: Permission) => {
+	const checkPermissions = async (result: string, permissionsToRequest: Permission) => {
 		switch (result) {
 			case RESULTS.UNAVAILABLE:
-				Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
+				if (Platform.OS === 'ios') {
+					Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
+				} else if (Platform.OS === 'android') {
+					const parsedSystemVersion = Number(systemVersion.split('.')[0]);
+					if (parsedSystemVersion > 11) {
+						Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
+					} else if (
+						parsedSystemVersion <= 11 &&
+						permissionsToRequest !== PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+					) {
+						const currentState: State = await BleManager.state();
+						if (currentState === State.PoweredOn) return true;
+					} else {
+						Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
+					}
+				}
+
 				break;
 			case RESULTS.DENIED:
 				setHasBluetoothPermission(false);
@@ -151,20 +170,27 @@ const LedgerConnect = () => {
 				hasPermission && setHasBluetoothPermission(true);
 			});
 		} else if (Platform.OS === 'android') {
-			checkMultiple([PERMISSIONS.ANDROID.BLUETOOTH_CONNECT, PERMISSIONS.ANDROID.BLUETOOTH_SCAN]).then(
-				(statuses) => {
-					const hasBluetoothConnectPermission = checkPermissions(
-						statuses[PERMISSIONS.ANDROID.BLUETOOTH_CONNECT],
-						PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
-					);
-					const hasBluetoothScanPermission = checkPermissions(
-						statuses[PERMISSIONS.ANDROID.BLUETOOTH_SCAN],
-						PERMISSIONS.ANDROID.BLUETOOTH_SCAN
-					);
+			checkMultiple([
+				PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+				PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
+				PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+			]).then((statuses) => {
+				const p1 = checkPermissions(
+					statuses[PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION],
+					PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+				);
 
-					hasBluetoothConnectPermission && hasBluetoothScanPermission && setHasBluetoothPermission(true);
-				}
-			);
+				const p2 = checkPermissions(
+					statuses[PERMISSIONS.ANDROID.BLUETOOTH_SCAN],
+					PERMISSIONS.ANDROID.BLUETOOTH_SCAN
+				);
+				const p3 = checkPermissions(
+					statuses[PERMISSIONS.ANDROID.BLUETOOTH_CONNECT],
+					PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
+				);
+
+				p1 && p2 && p3 && setHasBluetoothPermission(true);
+			});
 		}
 	}, []);
 
