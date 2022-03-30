@@ -11,7 +11,7 @@ import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
 import {
 	check,
-	// checkMultiple,
+	checkMultiple,
 	PERMISSIONS,
 	RESULTS,
 	// request as requestPermission,
@@ -23,6 +23,11 @@ import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
 import { BleManager, State } from 'react-native-ble-plx';
+
+type RequiredAndroidPermission =
+	| 'android.permission.ACCESS_FINE_LOCATION'
+	| 'android.permission.BLUETOOTH_CONNECT'
+	| 'android.permission.BLUETOOTH_SCAN';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -48,7 +53,6 @@ const createStyles = (colors: any) =>
 			marginTop: deviceHeight * 0.07,
 		},
 	});
-const systemVersion = getSystemVersion();
 
 const LedgerConnect = () => {
 	const { KeyringController, AccountTrackerController } = Engine.context as any;
@@ -64,7 +68,6 @@ const LedgerConnect = () => {
 		// Monitoring for the BLE adapter to be turned on
 		const manager = new BleManager();
 		const subscription = manager.onStateChange((state) => {
-			console.log('>>>>> STATE', state);
 			if (state === State.PoweredOff) {
 				Alert.alert('Bluetooth is off', 'Please turn on bluetooth for your device', [
 					{
@@ -83,20 +86,22 @@ const LedgerConnect = () => {
 	}, []);
 
 	useEffect(() => {
-		listen((event) => {
-			console.log('test', event);
-		});
+		const unsubscribe = listen((e) => console.log(e));
+
+		return () => unsubscribe();
 	}, []);
 
-	const connectAndUnlockDevice = async (transport: Transport) => {
+	const connectAndUnlockDevice = async (bleTransport: Transport) => {
 		try {
-			const appName = await KeyringController.connectLedgerHardware(transport);
+			const appName = await KeyringController.connectLedgerHardware(bleTransport);
 			if (appName !== 'Ethereum') {
 				throw new Error('Please open the Ethereum app on your device.');
 			}
-			// const _accounts = await KeyringController.getDefaultLedgerAccount(transport);
+
 			const _accounts = await KeyringController.unlockLedgerDefaultAccount();
 			setDefaultAccount(_accounts[0]);
+
+			await AccountTrackerController.syncWithAddresses([defaultAccount]);
 
 			navigation.navigate('WalletView');
 		} catch (e) {
@@ -107,10 +112,10 @@ const LedgerConnect = () => {
 		}
 	};
 
-	const onDeviceSelected = async (_device) => {
+	const onDeviceSelected = async (ledgerDevice: any) => {
 		try {
 			if (!transport) {
-				const bleTransport = await TransportBLE.open(_device);
+				const bleTransport = await TransportBLE.open(ledgerDevice);
 
 				bleTransport.on('disconnect', async () => {
 					setTransport(null);
@@ -127,89 +132,6 @@ const LedgerConnect = () => {
 		}
 	};
 
-	useEffect(() => {
-		AccountTrackerController.syncWithAddresses([defaultAccount]);
-	}, [AccountTrackerController, defaultAccount]);
-
-	// const checkPermissions = async (result: string, permissionsToRequest: Permission) => {
-	// 	console.log('we are here >>>>>>> 0', systemVersion);
-	// 	console.log('>>>>>> result', result, permissionsToRequest);
-
-	// 	switch (result) {
-	// 		case RESULTS.UNAVAILABLE: {
-	// 			console.log('we are here >>>>>>> 0.0.1', Platform.OS);
-
-	// 			if (Platform.OS === 'ios') {
-	// 				Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
-	// 			} else if (Platform.OS === 'android') {
-	// 				console.log('we are here >>>>>>> 0.1');
-	// 				const parsedSystemVersion = Number(systemVersion.split('.')[0]);
-
-	// 				console.log('we are here >>>>>>> 0.1.1', parsedSystemVersion);
-
-	// 				if (parsedSystemVersion > 11) {
-	// 					Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
-	// 				} else if (
-	// 					parsedSystemVersion <= 11 &&
-	// 					permissionsToRequest !== PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
-	// 				) {
-	// 					console.log('we are here >>>>>>> 1');
-	// 					const manager = new BleManager();
-	// 					const currentState: State = await manager.state();
-
-	// 					console.log('we are here >>>>>>> 2', currentState);
-
-	// 					if (currentState === State.PoweredOn) {
-	// 						return true;
-	// 					} else {
-	// 						console.log('>>>>> trying to power on');
-	// 						const res = await manager.enable();
-
-	// 						console.log('>>>>> res', res);
-
-	// 						return true;
-	// 					}
-
-	// 					Alert.alert('Bluetooth unavailable', 'Bluetooth is not available for this device');
-	// 				}
-	// 			}
-
-	// 			break;
-	// 		}
-	// 		case RESULTS.DENIED:
-	// 			setCanScanBluetoothDevices(false);
-	// 			Alert.alert('Access denied', 'Bluetooth access was denied by this device', [
-	// 				{
-	// 					text: 'Cancel',
-	// 					style: 'cancel',
-	// 				},
-	// 				{
-	// 					text: 'Enable bluetooth access',
-	// 					onPress: async () => {
-	// 						await requestPermission(permissionsToRequest);
-	// 					},
-	// 				},
-	// 			]);
-	// 			break;
-	// 		case RESULTS.BLOCKED:
-	// 			Alert.alert(
-	// 				'Access blocked',
-	// 				'Bluetooth access was blocked by this device. Please enable access from settings.',
-	// 				[
-	// 					{
-	// 						text: 'Open Settings',
-	// 						onPress: async () => {
-	// 							await openSettings();
-	// 						},
-	// 					},
-	// 				]
-	// 			);
-	// 			break;
-	// 		case RESULTS.GRANTED:
-	// 			return true;
-	// 	}
-	// };
-
 	const handleIOSBluetoothPermission = (bluetoothPermissionStatus: PermissionStatus) => {
 		switch (bluetoothPermissionStatus) {
 			case RESULTS.GRANTED:
@@ -217,6 +139,33 @@ const LedgerConnect = () => {
 			default:
 				return false;
 		}
+	};
+
+	const handleAndroidBluetoothPermissions = (
+		bluetoothPermissionStatuses: Record<RequiredAndroidPermission, PermissionStatus>
+	) => {
+		const requiredPermissions = [];
+		const parsedSystemVersion = Number(getSystemVersion().split('.')[0]);
+
+		if (parsedSystemVersion > 11) {
+			requiredPermissions.push(
+				PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+				PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
+				PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
+			);
+		} else if (parsedSystemVersion <= 11) {
+			requiredPermissions.push(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
+		}
+
+		const permissionStatuses = requiredPermissions.map(
+			(permission) => bluetoothPermissionStatuses[permission as RequiredAndroidPermission]
+		);
+
+		if (!permissionStatuses.some((p) => p !== RESULTS.GRANTED)) {
+			return true;
+		}
+
+		return false;
 	};
 
 	useEffect(() => {
@@ -238,41 +187,37 @@ const LedgerConnect = () => {
 					]);
 				}
 			}
+
+			if (Platform.OS === 'android') {
+				const requiredPermissions = await checkMultiple([
+					PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+					PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
+					PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+				]);
+
+				const bluetoothAllowed = handleAndroidBluetoothPermissions(requiredPermissions);
+
+				if (bluetoothAllowed) {
+					setCanScanBluetoothDevices(true);
+				} else {
+					Alert.alert(
+						'Missing permissions',
+						'Make sure you enable Bluetooth and Location access in your device settings',
+						[
+							{
+								text: 'Open Settings',
+								onPress: async () => {
+									await openSettings();
+								},
+							},
+						]
+					);
+				}
+			}
 		};
 
 		run();
 	}, []);
-
-	// useEffect(() => {
-	// 	if (Platform.OS === 'ios') {
-	// 		check(PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL).then((result) => {
-	// 			const hasPermission = checkPermissions(result, PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL);
-	// 			hasPermission && setCanScanBluetoothDevices(true);
-	// 		});
-	// 	} else if (Platform.OS === 'android') {
-	// 		checkMultiple([
-	// 			PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-	// 			'android.permission.BLUETOOTH_SCAN' as any,
-	// 			'android.permission.BLUETOOTH_CONNECT',
-	// 		]).then((statuses) => {
-	// 			const p1 = checkPermissions(
-	// 				statuses[PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION],
-	// 				PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
-	// 			);
-
-	// 			const p2 = checkPermissions(
-	// 				statuses['android.permission.BLUETOOTH_SCAN'],
-	// 				'android.permission.BLUETOOTH_SCAN' as any
-	// 			);
-	// 			const p3 = checkPermissions(
-	// 				statuses['android.permission.BLUETOOTH_CONNECT'],
-	// 				'android.permission.BLUETOOTH_CONNECT' as any
-	// 			);
-
-	// 			p1 && p2 && p3 && setCanScanBluetoothDevices(true);
-	// 		});
-	// 	}
-	// }, []);
 
 	return (
 		<SafeAreaView style={styles.container}>

@@ -39,11 +39,10 @@ const createStyles = (colors: Colors) =>
 		},
 		buttonContainer: {
 			position: 'absolute',
+			display: 'flex',
 			bottom: deviceHeight * 0.025,
 			left: 0,
-		},
-		button: {
-			width: deviceWidth * 0.8,
+			width: '100%',
 		},
 	});
 
@@ -132,7 +131,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 			</View>
 			{devices.length > 0 && (
 				<View style={styles.buttonContainer}>
-					<StyledButton type="confirm" onPress={onSelect} testID={'add-network-button'} style={styles.button}>
+					<StyledButton type="confirm" onPress={onSelect} testID={'add-network-button'}>
 						Continue
 					</StyledButton>
 				</View>
