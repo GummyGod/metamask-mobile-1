@@ -9,16 +9,7 @@ import Transport from '@ledgerhq/hw-transport';
 import { getSystemVersion } from 'react-native-device-info';
 import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
-import {
-	check,
-	checkMultiple,
-	PERMISSIONS,
-	RESULTS,
-	// request as requestPermission,
-	openSettings,
-	// Permission,
-	PermissionStatus,
-} from 'react-native-permissions';
+import { check, checkMultiple, PERMISSIONS, RESULTS, openSettings, PermissionStatus } from 'react-native-permissions';
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
@@ -50,8 +41,19 @@ const createStyles = (colors: any) =>
 		},
 		bodyContainer: {
 			flex: 1,
-			marginTop: deviceHeight * 0.07,
+			marginTop: deviceHeight * 0.025,
 		},
+		textContainer: {
+			marginTop: deviceHeight * 0.05,
+		},
+
+		instructionsText: {
+			marginTop: deviceHeight * 0.02,
+		},
+		howItWorksText: {
+			marginTop: deviceHeight * 0.02,
+		},
+		imageContainer: { alignItems: 'center', marginTop: deviceHeight * 0.02 },
 	});
 
 const LedgerConnect = () => {
@@ -226,6 +228,18 @@ const LedgerConnect = () => {
 				<Text bold style={styles.connectLedgerText}>
 					Connect Ledger
 				</Text>
+				<View style={styles.imageContainer}>
+					<Image source={require('../../../images/LedgerConnection.png')} />
+				</View>
+				<View style={styles.textContainer}>
+					<Text bold>Looking for device</Text>
+					<Text style={styles.instructionsText}>
+						Please make sure your Ledger Nano X is unlocked and bluetooth is enabled.
+					</Text>
+					<Text bold blue style={{ ...styles.howItWorksText }}>
+						How it works?
+					</Text>
+				</View>
 				<View style={styles.bodyContainer}>
 					{canScanBluetoothDevices && <Scan onDeviceSelected={onDeviceSelected} />}
 					{!canScanBluetoothDevices && <Text> Your Bluetooth is disabled</Text>}

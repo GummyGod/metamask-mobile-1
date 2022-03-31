@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { Observable } from 'rxjs';
 import { Device } from '@ledgerhq/react-native-hw-transport-ble/lib/types';
@@ -17,16 +17,6 @@ const createStyles = (colors: Colors) =>
 			flex: 1,
 			alignItems: 'center',
 		},
-		textContainer: {
-			marginTop: deviceHeight * 0.05,
-		},
-
-		instructionsText: {
-			marginTop: deviceHeight * 0.02,
-		},
-		howItWorksText: {
-			marginTop: deviceHeight * 0.02,
-		},
 		activityIndicatorContainer: {
 			marginTop: 50,
 		},
@@ -34,8 +24,8 @@ const createStyles = (colors: Colors) =>
 			borderColor: colors.border.default,
 			borderRadius: 5,
 			borderWidth: 2,
-			marginTop: 15,
 			height: 45,
+			width: deviceWidth * 0.85,
 		},
 		buttonContainer: {
 			position: 'absolute',
@@ -103,32 +93,22 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 
 	return (
 		<View style={styles.container}>
-			<Image source={require('../../../images/LedgerConnection.png')} />
-			<View style={styles.textContainer}>
-				<Text bold>Looking for device</Text>
-				<Text style={styles.instructionsText}>
-					Please make sure your Ledger Nano X is unlocked and bluetooth is enabled.
-				</Text>
-				<Text bold blue style={{ ...styles.howItWorksText }}>
-					How it works?
-				</Text>
-				{devices.length > 0 && (
-					<View style={styles.picker}>
-						<SelectComponent
-							options={options}
-							label="Available devices"
-							defaultValue={options[0]?.label}
-							onValueChange={onChange}
-						/>
-					</View>
-				)}
+			{devices.length > 0 && (
+				<View style={styles.picker}>
+					<SelectComponent
+						options={options}
+						label="Available devices"
+						defaultValue={options[0]?.label}
+						onValueChange={onChange}
+					/>
+				</View>
+			)}
+			{devices.length === 0 && (
+				<View style={styles.activityIndicatorContainer}>
+					<ActivityIndicator />
+				</View>
+			)}
 
-				{devices.length === 0 && (
-					<View style={styles.activityIndicatorContainer}>
-						<ActivityIndicator />
-					</View>
-				)}
-			</View>
 			{devices.length > 0 && (
 				<View style={styles.buttonContainer}>
 					<StyledButton type="confirm" onPress={onSelect} testID={'add-network-button'}>
