@@ -6,19 +6,15 @@ import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { useNavigation } from '@react-navigation/native';
 import { listen } from '@ledgerhq/logs';
 import Transport from '@ledgerhq/hw-transport';
-import { getSystemVersion } from 'react-native-device-info';
+
 import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
-import { check, checkMultiple, PERMISSIONS, RESULTS, openSettings, PermissionStatus } from 'react-native-permissions';
+import { check, checkMultiple, PERMISSIONS, openSettings } from 'react-native-permissions';
 import Scan from './Scan';
 import Engine from '../../../core/Engine';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
 import { BleManager, State } from 'react-native-ble-plx';
-
-type RequiredAndroidPermission =
-	| 'android.permission.ACCESS_FINE_LOCATION'
-	| 'android.permission.BLUETOOTH_CONNECT'
-	| 'android.permission.BLUETOOTH_SCAN';
+import { handleAndroidBluetoothPermissions, handleIOSBluetoothPermission } from './ledgerUtils';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -132,42 +128,6 @@ const LedgerConnect = () => {
 				'Please make sure your Ledger is turned on and your Bluetooth is enabled'
 			);
 		}
-	};
-
-	const handleIOSBluetoothPermission = (bluetoothPermissionStatus: PermissionStatus) => {
-		switch (bluetoothPermissionStatus) {
-			case RESULTS.GRANTED:
-				return true;
-			default:
-				return false;
-		}
-	};
-
-	const handleAndroidBluetoothPermissions = (
-		bluetoothPermissionStatuses: Record<RequiredAndroidPermission, PermissionStatus>
-	) => {
-		const requiredPermissions = [];
-		const parsedSystemVersion = Number(getSystemVersion().split('.')[0]);
-
-		if (parsedSystemVersion > 11) {
-			requiredPermissions.push(
-				PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-				PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-				PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
-			);
-		} else if (parsedSystemVersion <= 11) {
-			requiredPermissions.push(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
-		}
-
-		const permissionStatuses = requiredPermissions.map(
-			(permission) => bluetoothPermissionStatuses[permission as RequiredAndroidPermission]
-		);
-
-		if (!permissionStatuses.some((p) => p !== RESULTS.GRANTED)) {
-			return true;
-		}
-
-		return false;
 	};
 
 	useEffect(() => {
