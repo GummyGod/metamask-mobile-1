@@ -20,6 +20,7 @@
     "start:ios:e2e": "./scripts/build.sh ios debugE2E",
     "start:ios:device": "./scripts/build.sh ios debug --device",
     "start:android": "./scripts/build.sh android debug",
+    "start:android:device": "./scripts/build.sh android debug --device",
     "start:android:e2e": "./scripts/build.sh android debugE2E",
     "build:static-logos": "node ./scripts/metamask-bot-build-generate-static-assets",
     "build:announce": "node ./scripts/metamask-bot-build-announce-bitrise.js",

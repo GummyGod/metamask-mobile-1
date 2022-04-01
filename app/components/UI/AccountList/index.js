@@ -147,6 +147,7 @@ class AccountList extends PureComponent {
 		this.mounted = true;
 		this.getInitialSelectedAccountIndex();
 		const orderedAccounts = this.getAccounts();
+
 		InteractionManager.runAfterInteractions(() => {
 			this.assignENSToAccounts(orderedAccounts);
 			if (orderedAccounts.length > 4) {
@@ -288,6 +289,7 @@ class AccountList extends PureComponent {
 	renderItem = ({ item }) => {
 		const { ticker } = this.props;
 		const { accountsENS } = this.state;
+
 		return (
 			<AccountElement
 				onPress={this.onAccountChange}

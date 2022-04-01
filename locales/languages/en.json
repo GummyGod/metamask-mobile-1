@@ -663,6 +663,7 @@
 		"confirm": "Confirm"
 	},
 	"transaction": {
+		"hardware": "Hardware",
 		"alert": "ALERT",
 		"amount": "Amount",
 		"next": "Next",

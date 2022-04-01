@@ -3,6 +3,8 @@ import Engine from '../../core/Engine';
 import { strings } from '../../../locales/i18n';
 import { tlc } from '../general';
 import punycode from 'punycode/punycode';
+import { KeyringTypes } from '@metamask/controllers';
+
 
 /**
  * Returns full checksummed address
@@ -103,4 +105,23 @@ export function resemblesAddress(address) {
 export function safeToChecksumAddress(address) {
 	if (!address) return undefined;
 	return toChecksumAddress(address);
+}
+
+/**
+ * Determine if the account is a hardware wallet
+ *
+ * @param {String} address - String corresponding to an address
+ * @returns {Boolean} - Returns a boolean
+ */
+export function isHardwareAccount(address) {
+	const { KeyringController } = Engine.context;
+	const { keyrings } = KeyringController.state;
+	const hardwareKeyrings = keyrings.filter((keyring) =>
+		[KeyringTypes.ledger || KeyringTypes.qr].includes(keyring.type)
+	);
+	let hardwareAccounts = [];
+	for (const hardwareKeyring of hardwareKeyrings) {
+		hardwareAccounts = hardwareAccounts.concat(hardwareKeyring.accounts.map((account) => account.toLowerCase()));
+	}
+	return hardwareAccounts.includes(address.toLowerCase());
 }
