@@ -74,6 +74,7 @@ const LedgerConnect = () => {
 				const appName = await KeyringController.connectLedgerHardware(bleTransport);
 				if (appName !== 'Ethereum') {
 					Alert.alert('Ethereum app is not running', 'Please open the Ethereum app on your device.');
+					setIsRetry(true);
 					return;
 				}
 
