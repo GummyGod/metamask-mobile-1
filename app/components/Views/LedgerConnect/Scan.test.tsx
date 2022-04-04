@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { shallow } from 'enzyme';
-import LedgerConnect from '.';
+import Scan from './Scan';
 import { Provider } from 'react-redux';
 import configureMockStore from 'redux-mock-store';
 
@@ -38,11 +38,11 @@ jest.mock('react-native-permissions', () => ({
 	openSettings: jest.fn(),
 }));
 
-describe('LedgerConnect', () => {
+describe('Scan', () => {
 	it('should render correctly', () => {
 		const wrapper = shallow(
 			<Provider store={store}>
-				<LedgerConnect />
+				<Scan onDeviceSelected={jest.fn()} />
 			</Provider>
 		);
 		expect(wrapper).toMatchSnapshot();
