@@ -48,7 +48,6 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 		// Monitoring for the BLE adapter to be turned on
 		const manager = new BleManager();
 		const subscription = manager.onStateChange((state) => {
-			console.log('>>>> WE ARE HERE', state);
 			if (state === State.PoweredOff) {
 				Alert.alert('Bluetooth is off', 'Please turn on bluetooth for your device', [
 					{

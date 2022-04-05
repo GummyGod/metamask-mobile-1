@@ -1,5 +1,4 @@
 import React from 'react';
-import { View } from 'react-native';
 import { shallow } from 'enzyme';
 import Scan from './Scan';
 import { Provider } from 'react-redux';
@@ -15,8 +14,6 @@ jest.mock('react-native-ble-plx', () => ({
 		}),
 	}),
 }));
-
-jest.mock('./Scan', () => () => <View>Scan</View>);
 
 jest.mock('react-native-permissions', () => ({
 	check: jest.fn().mockRejectedValue('granted'),
