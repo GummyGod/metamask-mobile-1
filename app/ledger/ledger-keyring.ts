@@ -2,21 +2,26 @@ import AppEth from '@ledgerhq/hw-app-eth';
 import Transport from '@ledgerhq/hw-transport';
 import ledgerService from '@ledgerhq/hw-app-eth/lib/services/ledger';
 import { LedgerEthTransactionResolution } from '@ledgerhq/hw-app-eth/lib/services/types';
-import { rlp, addHexPrefix } from 'ethereumjs-util';
+import { rlp, addHexPrefix, stripHexPrefix, toChecksumAddress } from 'ethereumjs-util';
 import { TransactionFactory, TypedTransaction } from '@ethereumjs/tx';
+import { recoverPersonalSignature } from 'eth-sig-util';
+
+// eslint-disable-next-line
+global.Buffer = require('buffer').Buffer;
 
 const hdPathString = `m/44'/60'/0'/0/0`;
 const type = 'Ledger';
 
-interface SerializationOptions {
+type SerializationOptions = {
 	hdPath?: string;
 	accounts?: Account[];
-}
+	deviceId?: string;
+};
 
-interface Account {
+type Account = {
 	address: string;
 	hdPath: string;
-}
+};
 
 export interface EthereumApp {
 	getAddress(
@@ -38,6 +43,15 @@ export interface EthereumApp {
 		v: string;
 		r: string;
 	}>;
+
+	signPersonalMessage(
+		path: string,
+		messageHex: string
+	): Promise<{
+		v: number;
+		s: string;
+		r: string;
+	}>;
 }
 export default class LedgerKeyring {
 	public static readonly type = type;
@@ -46,26 +60,30 @@ export default class LedgerKeyring {
 
 	private hdPath: string = hdPathString;
 
-	private transport?: Transport;
+	private deviceId = '';
 
 	private accounts: Account[] = [];
 
 	private app?: EthereumApp;
 
+	private transport?: Transport;
+
 	constructor(opts: SerializationOptions = {}) {
-		this.deserialize(opts);
+		void this.deserialize(opts);
 	}
 
 	// eslint-disable-next-line @typescript-eslint/require-await
 	serialize = async (): Promise<SerializationOptions> => ({
 		hdPath: this.hdPath,
 		accounts: this.accounts,
+		deviceId: this.deviceId,
 	});
 
 	// eslint-disable-next-line @typescript-eslint/require-await
 	deserialize = async (opts: SerializationOptions): Promise<void> => {
 		this.hdPath = opts.hdPath || hdPathString;
 		this.accounts = opts.accounts || [];
+		this.deviceId = opts.deviceId || '';
 	};
 
 	// eslint-disable-next-line @typescript-eslint/require-await
@@ -83,17 +101,15 @@ export default class LedgerKeyring {
 
 	addAccounts = async (n = 1): Promise<string[]> => {
 		// The current immplemenation of LedgerKeyring only supports one account
-		if (n > 1) {
-			throw new Error('LedgerKeyring only supports one account ' + n);
+		if (this.accounts.length > 0 || n > 1) {
+			throw new Error('LedgerKeyring only supports one account');
 		}
 
-		if (this.accounts.length === 0) {
-			const address = await this.unlock(this.hdPath);
-			this.accounts.push({
-				address,
-				hdPath: this.hdPath,
-			});
-		}
+		const address = await this.unlock(this.hdPath);
+		this.accounts.push({
+			address,
+			hdPath: this.hdPath,
+		});
 
 		return this.getAccounts();
 	};
@@ -109,6 +125,7 @@ export default class LedgerKeyring {
 	};
 
 	signTransaction = async (address: string, tx: TypedTransaction) => {
+		const app = this._getApp();
 		const hdPath = this._getHDPathFromAddress(address);
 
 		// `getMessageToSign` will return valid RLP for all transaction types
@@ -118,29 +135,16 @@ export default class LedgerKeyring {
 			? messageToSign.toString('hex')
 			: rlp.encode(messageToSign).toString('hex');
 
-		console.log('before resolveTransaction', rawTxHex);
-
 		const resolution = await ledgerService.resolveTransaction(rawTxHex, {}, {});
 
-		const app = this._getApp();
 		const { r, s, v } = await app.signTransaction(hdPath, rawTxHex, resolution);
-
-		console.log('after signTransaction', r, s, v);
 
 		// Because tx will be immutable, first get a plain javascript object that
 		// represents the transaction. Using txData here as it aligns with the
 		// nomenclature of ethereumjs/tx.
 		const txData = tx.toJSON();
 
-		console.log('txData', txData);
-
-		console.log(typeof tx.type);
-		console.log(typeof txData.type);
-		// console.log(tx.type);
-		// console.log(parseInt(2));
 		// The fromTxData utility expects a type to support transactions with a type other than 0
-		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-ignore)
 		txData.type = `0x${tx.type}`;
 
 		// The fromTxData utility expects v,r and s to be hex prefixed
@@ -156,43 +160,6 @@ export default class LedgerKeyring {
 		});
 
 		return transaction;
-	};
-
-	setTransport = (transport: Transport) => {
-		this.transport = transport;
-		this.app = new AppEth(transport);
-	};
-
-	setApp = (app: EthereumApp): void => {
-		this.app = app;
-	};
-
-	getRunningApp = async (): string => {
-		const app = this._getApp();
-
-		const runningApp = await app.getAppAndVersion();
-
-		return runningApp.name;
-	};
-
-	private _getApp = (): EthereumApp => {
-		if (!this.app) {
-			throw new Error('Ledger app is not initialized. You must call setTransport first.');
-		}
-
-		return this.app;
-	};
-
-	private _getHDPathFromAddress = (address: string): string => {
-		const account = this.accounts.find(
-			({ address: accAddress }) => accAddress.toLowerCase() === address.toLowerCase()
-		);
-
-		if (!account) {
-			throw new Error(`Account not found for address: ${address}`);
-		}
-
-		return account.hdPath;
 	};
 
 	getAppAndVersion = async (): Promise<{
@@ -221,5 +188,71 @@ export default class LedgerKeyring {
 			appName,
 			version,
 		};
+	};
+
+	signMessage = async (address: string, message: string) => this.signPersonalMessage(address, message);
+
+	signPersonalMessage = async (address: string, message: string) => {
+		const hdPath = this._getHDPathFromAddress(address);
+		const messageWithoutHexPrefix = stripHexPrefix(message);
+
+		const app = this._getApp();
+		const { r, s, v } = await app.signPersonalMessage(hdPath, messageWithoutHexPrefix);
+
+		let modifiedV = (v - 27).toString(16);
+
+		if (modifiedV.length < 2) {
+			modifiedV = `0${modifiedV}`;
+		}
+
+		const signature = `0x${r}${s}${modifiedV}`;
+		const addressSignedWith = recoverPersonalSignature({
+			data: message,
+			sig: signature,
+		});
+
+		if (toChecksumAddress(addressSignedWith) !== toChecksumAddress(address)) {
+			throw new Error("Ledger: The signature doesn't match the right address");
+		}
+
+		return signature;
+	};
+
+	forgetDevice = () => {
+		this.accounts = [];
+		this.deviceId = '';
+	};
+
+	setTransport = (transport: Transport, deviceId: string) => {
+		if (this.deviceId && this.deviceId !== deviceId) {
+			throw new Error('LedgerKeyring: deviceId mismatch.');
+		}
+
+		this.transport = transport;
+		this.app = new AppEth(transport);
+	};
+
+	setApp = (app: EthereumApp): void => {
+		this.app = app;
+	};
+
+	private _getApp = (): EthereumApp => {
+		if (!this.app) {
+			throw new Error('Ledger app is not initialized. You must call setTransport first.');
+		}
+
+		return this.app;
+	};
+
+	private _getHDPathFromAddress = (address: string): string => {
+		const account = this.accounts.find(({ address: accAddress }) => {
+			return accAddress.toLowerCase() === address.toLowerCase();
+		});
+
+		if (!account) {
+			throw new Error(`Account not found for address: ${address}`);
+		}
+
+		return account.hdPath;
 	};
 }
