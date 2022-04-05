@@ -71,7 +71,7 @@ const LedgerConnect = () => {
 				bleTransport.on('disconnect', () => setTransport(null));
 
 				// Initialise the keyring and check for pre-conditions
-				const appName = await KeyringController.connectLedgerHardware(bleTransport);
+				const appName = await KeyringController.connectLedgerHardware(bleTransport, selectedDevice.id);
 				if (appName !== 'Ethereum') {
 					Alert.alert('Ethereum app is not running', 'Please open the Ethereum app on your device.');
 					setIsRetry(true);
@@ -79,8 +79,8 @@ const LedgerConnect = () => {
 				}
 
 				// Retrieve the default account and sync the address with Metamask
-				const ledgerAccounts = await KeyringController.unlockLedgerDefaultAccount();
-				await AccountTrackerController.syncWithAddresses(ledgerAccounts);
+				const defaultLedgerAccount = await KeyringController.unlockLedgerDefaultAccount();
+				await AccountTrackerController.syncWithAddresses([defaultLedgerAccount]);
 
 				navigation.navigate('WalletView');
 			}
