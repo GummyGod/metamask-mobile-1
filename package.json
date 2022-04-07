@@ -96,6 +96,7 @@
     "simple-get": "4.0.1"
   },
   "dependencies": {
+    "@ethereumjs/tx": "^3.5.1",
     "@exodus/react-native-payments": "git+https://github.com/MetaMask/react-native-payments.git#dbc8cbbed570892d2fea5e3d183bf243e062c1e5",
     "@ledgerhq/hw-app-eth": "^6.26.1",
     "@ledgerhq/hw-transport": "^6.24.1",
@@ -142,9 +143,10 @@
     "eth-json-rpc-filters": "4.2.2",
     "eth-json-rpc-infura": "5.1.0",
     "eth-json-rpc-middleware": "4.3.0",
+    "eth-sig-util": "^3.0.1",
     "eth-url-parser": "1.0.4",
     "ethereumjs-abi": "0.6.6",
-    "ethereumjs-util": "6.1.0",
+    "ethereumjs-util": "^7.1.4",
     "ethers": "^5.0.14",
     "ethjs-contract": "0.2.3",
     "ethjs-ens": "2.0.1",
