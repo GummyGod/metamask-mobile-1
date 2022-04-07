@@ -1,14 +1,19 @@
 import React from 'react';
-import { View } from 'react-native';
 import { shallow } from 'enzyme';
-import LedgerConnect from '.';
+import Scan from './Scan';
 import { Provider } from 'react-redux';
 import configureMockStore from 'redux-mock-store';
 
 const mockStore = configureMockStore();
 const store = mockStore({});
 
-jest.mock('@ledgerhq/react-native-hw-transport-ble', () => null);
+jest.mock('react-native-ble-plx', () => ({
+	BleManager: () => ({
+		onStateChange: () => ({
+			remove: jest.fn(),
+		}),
+	}),
+}));
 
 jest.mock('react-native-permissions', () => ({
 	check: jest.fn().mockRejectedValue('granted'),
@@ -30,13 +35,11 @@ jest.mock('react-native-permissions', () => ({
 	openSettings: jest.fn(),
 }));
 
-jest.doMock('./Scan', () => () => <View>Scan</View>);
-
-describe('LedgerConnect', () => {
+describe('Scan', () => {
 	it('should render correctly', () => {
 		const wrapper = shallow(
 			<Provider store={store}>
-				<LedgerConnect />
+				<Scan onDeviceSelected={jest.fn()} />
 			</Provider>
 		);
 		expect(wrapper).toMatchSnapshot();
