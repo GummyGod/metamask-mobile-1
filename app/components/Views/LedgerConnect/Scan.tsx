@@ -91,6 +91,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 					PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
 					PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
 					PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+					PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE,
 				]);
 
 				const bluetoothAllowed = await handleAndroidBluetoothPermissions(requiredPermissions);

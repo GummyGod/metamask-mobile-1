@@ -25,7 +25,8 @@ export const handleAndroidBluetoothPermissions = async (
 		requiredPermissions.push(
 			PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
 			PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-			PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
+			PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+			PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE
 		);
 
 		const permissionsNotGranted: AndroidPermission[] = requiredPermissions
@@ -35,7 +36,9 @@ export const handleAndroidBluetoothPermissions = async (
 			.map((p) => p as AndroidPermission);
 
 		const result = await requestMultiple(permissionsNotGranted);
+		console.log('res', result);
 		Object.assign(bluetoothPermissionStatuses, result);
+		console.log(Object.assign(bluetoothPermissionStatuses, result));
 	} else if (parsedSystemVersion <= 11) {
 		requiredPermissions.push(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
 	}
