@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, Image, SafeAreaView, TextStyle, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
@@ -11,6 +11,7 @@ import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
 import Scan from './Scan';
+import BluetoothTransport from '@ledgerhq/react-native-hw-transport-ble';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -57,41 +58,67 @@ const LedgerConnect = () => {
 	const { colors } = useAppThemeFromContext() ?? mockTheme;
 	const navigation = useNavigation();
 	const styles = useMemo(() => createStyles(colors), [colors]);
-	const [transport, setTransport] = useState(null);
 	const [selectedDevice, setSelectedDevice] = useState<Device>(null);
 	const [isRetry, setIsRetry] = useState(false);
 	const [isConnecting, setIsConnecting] = useState(false);
+	const transportRef = useRef<BluetoothTransport>();
+
+	useEffect(
+		() => () => {
+			if (transportRef.current) {
+				transportRef.current.close();
+			}
+		},
+		[]
+	);
 
 	const onConnectToLedgerDevice = async () => {
+		setIsConnecting(true);
+
+		// Estabilish bluetooth connection to ledger
 		try {
-			if (!transport && selectedDevice) {
-				setIsConnecting(true);
-
-				// Estabilish bluetooth connection to ledger
-				const bleTransport = await TransportBLE.open(selectedDevice);
-				setTransport(bleTransport);
-
-				bleTransport.on('disconnect', () => setTransport(null));
-
-				// Initialise the keyring and check for pre-conditions
-				const appName = await KeyringController.connectLedgerHardware(bleTransport, selectedDevice.id);
-				if (appName !== 'Ethereum') {
-					Alert.alert('Ethereum app is not running', 'Please open the Ethereum app on your device.');
-					setIsRetry(true);
-					return;
-				}
-
-				// Retrieve the default account and sync the address with Metamask
-				const defaultLedgerAccount = await KeyringController.unlockLedgerDefaultAccount();
-				await AccountTrackerController.syncWithAddresses([defaultLedgerAccount]);
-
-				navigation.navigate('WalletView');
+			if (!transportRef.current && selectedDevice) {
+				transportRef.current = await TransportBLE.open(selectedDevice);
+				transportRef.current?.on('disconnect', () => (transportRef.current = undefined));
 			}
-		} catch (e) {
-			console.log(e);
+		} catch {
 			setIsRetry(true);
+			setIsConnecting(false);
 
-			Alert.alert('Ledger unavailable', 'Please make sure your Ledger is unlocked and your Bluetooth is enabled');
+			Alert.alert(
+				'Bluetooth connection failed',
+				'Please make sure your Ledger is unlocked and your Bluetooth is enabled'
+			);
+
+			return;
+		}
+
+		// Get Account from Ledger
+		try {
+			// Initialise the keyring and check for pre-conditions (is the correct app running?)
+			const appName = await KeyringController.connectLedgerHardware(transportRef.current, selectedDevice.id);
+			if (appName !== 'Ethereum') {
+				Alert.alert('Ethereum app is not running', 'Please open the Ethereum app on your device.');
+				setIsRetry(true);
+				setIsConnecting(false);
+				return;
+			}
+
+			// Retrieve the default account and sync the address with Metamask
+			const defaultLedgerAccount = await KeyringController.unlockLedgerDefaultAccount();
+			await AccountTrackerController.syncWithAddresses([defaultLedgerAccount]);
+
+			// Go back to main view
+			navigation.navigate('WalletView');
+		} catch (e: any) {
+			let errorMessage = e.message;
+
+			if (e.name === 'TransportStatusError' && e.message.includes('0x6b0c')) {
+				errorMessage = 'Please unlock your Ledger device';
+			}
+
+			Alert.alert('Cannot get account', errorMessage);
+			setIsRetry(true);
 		} finally {
 			setIsConnecting(false);
 		}
