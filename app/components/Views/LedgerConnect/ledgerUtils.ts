@@ -1,5 +1,5 @@
 import { getSystemVersion } from 'react-native-device-info';
-import { PERMISSIONS, PermissionStatus, RESULTS } from 'react-native-permissions';
+import { PERMISSIONS, PermissionStatus, RESULTS, requestMultiple, AndroidPermission } from 'react-native-permissions';
 
 type RequiredAndroidPermission =
 	| 'android.permission.ACCESS_FINE_LOCATION'
@@ -15,7 +15,7 @@ export const handleIOSBluetoothPermission = (bluetoothPermissionStatus: Permissi
 	}
 };
 
-export const handleAndroidBluetoothPermissions = (
+export const handleAndroidBluetoothPermissions = async (
 	bluetoothPermissionStatuses: Record<RequiredAndroidPermission, PermissionStatus>
 ) => {
 	const requiredPermissions = [];
@@ -27,6 +27,15 @@ export const handleAndroidBluetoothPermissions = (
 			PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
 			PERMISSIONS.ANDROID.BLUETOOTH_CONNECT
 		);
+
+		const permissionsNotGranted: AndroidPermission[] = requiredPermissions
+			.filter(
+				(permission) => bluetoothPermissionStatuses[permission as RequiredAndroidPermission] !== RESULTS.GRANTED
+			)
+			.map((p) => p as AndroidPermission);
+
+		const result = await requestMultiple(permissionsNotGranted);
+		Object.assign(bluetoothPermissionStatuses, result);
 	} else if (parsedSystemVersion <= 11) {
 		requiredPermissions.push(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
 	}
