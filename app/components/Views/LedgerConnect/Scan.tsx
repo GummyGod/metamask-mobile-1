@@ -93,7 +93,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 					PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
 				]);
 
-				const bluetoothAllowed = handleAndroidBluetoothPermissions(requiredPermissions);
+				const bluetoothAllowed = await handleAndroidBluetoothPermissions(requiredPermissions);
 
 				if (bluetoothAllowed) {
 					setCanScan(true);
