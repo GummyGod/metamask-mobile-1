@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Image, SafeAreaView, TextStyle, Alert } from 'react-native';
+import { View, StyleSheet, Image, SafeAreaView, TextStyle, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { Device } from '@ledgerhq/react-native-hw-transport-ble/lib/types';
@@ -60,10 +60,13 @@ const LedgerConnect = () => {
 	const [transport, setTransport] = useState(null);
 	const [selectedDevice, setSelectedDevice] = useState<Device>(null);
 	const [isRetry, setIsRetry] = useState(false);
+	const [isConnecting, setIsConnecting] = useState(false);
 
 	const onConnectToLedgerDevice = async () => {
 		try {
 			if (!transport && selectedDevice) {
+				setIsConnecting(true);
+
 				// Estabilish bluetooth connection to ledger
 				const bleTransport = await TransportBLE.open(selectedDevice);
 				setTransport(bleTransport);
@@ -85,9 +88,12 @@ const LedgerConnect = () => {
 				navigation.navigate('WalletView');
 			}
 		} catch (e) {
+			console.log(e);
 			setIsRetry(true);
 
 			Alert.alert('Ledger unavailable', 'Please make sure your Ledger is unlocked and your Bluetooth is enabled');
+		} finally {
+			setIsConnecting(false);
 		}
 	};
 
@@ -117,8 +123,9 @@ const LedgerConnect = () => {
 								type="confirm"
 								onPress={onConnectToLedgerDevice}
 								testID={'add-network-button'}
+								disabled={isConnecting}
 							>
-								{isRetry ? 'Retry' : 'Continue'}
+								{isConnecting ? <ActivityIndicator color="#FFFFFF" /> : isRetry ? 'Retry' : 'Continue'}
 							</StyledButton>
 						</View>
 					)}

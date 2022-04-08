@@ -5,7 +5,7 @@ import { Observable, Subscription } from 'rxjs';
 import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
 import { Device } from '@ledgerhq/react-native-hw-transport-ble/lib/types';
 import { check, checkMultiple, PERMISSIONS, openSettings } from 'react-native-permissions';
-import { BleManager, State } from 'react-native-ble-plx';
+import { State } from 'react-native-ble-plx';
 
 import SelectComponent from '../../UI/SelectComponent';
 import { deviceWidth } from '../../../util/scaling';
@@ -35,7 +35,8 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 	const { colors } = useAppThemeFromContext() || mockTheme;
 	const styles = useMemo(() => createStyles(colors), [colors]);
 	const [devices, setDevices] = useState<Device[]>([]);
-	const [canScan, setCanScan] = useState<boolean>(false);
+	const [bluetoothOn, setBluetoothOn] = useState(false);
+	const [hasBluetoothPermissions, setHasBluetoothPermissions] = useState<boolean>(false);
 
 	const options = devices?.map(({ id, name, ...rest }: Partial<Device>) => ({
 		key: id,
@@ -46,24 +47,30 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 
 	useEffect(() => {
 		// Monitoring for the BLE adapter to be turned on
-		const manager = new BleManager();
-		const subscription = manager.onStateChange((state) => {
-			if (state === State.PoweredOff) {
-				Alert.alert('Bluetooth is off', 'Please turn on bluetooth for your device', [
-					{
-						text: 'Open Settings',
-						onPress: async () => {
-							Platform.OS === 'ios'
-								? Linking.openURL('App-Prefs:Bluetooth')
-								: Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS');
-						},
-					},
-				]);
-			}
-		}, true);
+		const subscription = TransportBLE.observeState({
+			next: (e: { available: boolean; type: State }) => {
+				if (e.available && e.type === State.PoweredOn && !bluetoothOn) {
+					setBluetoothOn(true);
+				}
 
-		return () => subscription.remove();
-	}, []);
+				if (!e.available && e.type === State.PoweredOff) {
+					setBluetoothOn(false);
+					Alert.alert('Bluetooth is off', 'Please turn on bluetooth for your device', [
+						{
+							text: 'Open Settings',
+							onPress: async () => {
+								Platform.OS === 'ios'
+									? Linking.openURL('App-Prefs:Bluetooth')
+									: Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS');
+							},
+						},
+					]);
+				}
+			},
+		});
+
+		return () => subscription.unsubscribe();
+	}, [bluetoothOn]);
 
 	useEffect(() => {
 		// Checking if app has required permissions
@@ -73,7 +80,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 				const bluetoothAllowed = handleIOSBluetoothPermission(bluetoothPermissionStatus);
 
 				if (bluetoothAllowed) {
-					setCanScan(true);
+					setHasBluetoothPermissions(true);
 				} else {
 					Alert.alert('Access blocked', 'Please enable bluetooth for you app', [
 						{
@@ -97,7 +104,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 				const bluetoothAllowed = await handleAndroidBluetoothPermissions(requiredPermissions);
 
 				if (bluetoothAllowed) {
-					setCanScan(true);
+					setHasBluetoothPermissions(true);
 				} else {
 					Alert.alert(
 						'Missing permissions',
@@ -122,7 +129,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 		// Initiate scanning and pairing if bluetooth is enabled
 		let subscription: Subscription;
 
-		if (canScan) {
+		if (hasBluetoothPermissions && bluetoothOn) {
 			subscription = new Observable(TransportBLE.listen).subscribe({
 				next: (e: any) => {
 					const deviceFound = devices.some((d) => d.id === e.descriptor.id);
@@ -145,11 +152,13 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 			subscription?.unsubscribe();
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [canScan]);
+	}, [hasBluetoothPermissions, bluetoothOn]);
+
+	const displayDevices = devices.length > 0 && bluetoothOn && hasBluetoothPermissions;
 
 	return (
 		<View style={styles.container}>
-			{devices.length > 0 && (
+			{displayDevices && (
 				<View style={styles.picker}>
 					<SelectComponent
 						options={options}
@@ -159,7 +168,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 					/>
 				</View>
 			)}
-			{devices.length === 0 && (
+			{!displayDevices && (
 				<View style={styles.activityIndicatorContainer}>
 					<ActivityIndicator />
 				</View>
