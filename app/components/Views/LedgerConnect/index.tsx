@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, Image, SafeAreaView, TextStyle, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
+import BluetoothTransport from '@ledgerhq/react-native-hw-transport-ble';
 import { Device } from '@ledgerhq/react-native-hw-transport-ble/lib/types';
 
 import Engine from '../../../core/Engine';
@@ -11,7 +11,6 @@ import { mockTheme, useAppThemeFromContext } from '../../../util/theme';
 import { fontStyles } from '../../../styles/common';
 import { deviceHeight, deviceWidth } from '../../../util/scaling';
 import Scan from './Scan';
-import BluetoothTransport from '@ledgerhq/react-native-hw-transport-ble';
 
 const createStyles = (colors: any) =>
 	StyleSheet.create({
@@ -78,7 +77,7 @@ const LedgerConnect = () => {
 		// Estabilish bluetooth connection to ledger
 		try {
 			if (!transportRef.current && selectedDevice) {
-				transportRef.current = await TransportBLE.open(selectedDevice);
+				transportRef.current = await BluetoothTransport.open(selectedDevice);
 				transportRef.current?.on('disconnect', () => (transportRef.current = undefined));
 			}
 		} catch {

@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, View, StyleSheet, ActivityIndicator, Linking, Platform } from 'react-native';
 import { Observable, Subscription } from 'rxjs';
-import TransportBLE from '@ledgerhq/react-native-hw-transport-ble';
+import BluetoothTransport from '@ledgerhq/react-native-hw-transport-ble';
 import { Device } from '@ledgerhq/react-native-hw-transport-ble/lib/types';
 import { check, checkMultiple, PERMISSIONS, openSettings } from 'react-native-permissions';
 import { State } from 'react-native-ble-plx';
@@ -47,7 +47,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 
 	useEffect(() => {
 		// Monitoring for the BLE adapter to be turned on
-		const subscription = TransportBLE.observeState({
+		const subscription = BluetoothTransport.observeState({
 			next: (e: { available: boolean; type: State }) => {
 				if (e.available && e.type === State.PoweredOn && !bluetoothOn) {
 					setBluetoothOn(true);
@@ -130,7 +130,7 @@ const Scan = ({ onDeviceSelected }: { onDeviceSelected: (device: Device) => void
 		let subscription: Subscription;
 
 		if (hasBluetoothPermissions && bluetoothOn) {
-			subscription = new Observable(TransportBLE.listen).subscribe({
+			subscription = new Observable(BluetoothTransport.listen).subscribe({
 				next: (e: any) => {
 					const deviceFound = devices.some((d) => d.id === e.descriptor.id);
 
